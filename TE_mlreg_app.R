@@ -5,9 +5,12 @@ ui = fluidPage(
   tcgaexplorer_ml_UI("ml")
 )
 server= function(input,output,session) {
-  dataprepml_Server("ml") 
-  df =dataprepml_Server("ml")
-  regularization_ml_Server("ml",regress_data  = df)
+  dataprepml_Serverz("ml")
+  
+  df =dataprepml_Serverz("ml")
+  regression_ml_Server("ml",regress_data  = df)
+  
+  
   
 }
 

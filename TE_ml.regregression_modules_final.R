@@ -68,7 +68,7 @@ dataprepInputControl_UI <- function(id) {
                                     choices = c(""))
     ),
     conditionalPanel(condition = "input.response_prep_method == 'gene_list' ", ns = ns,
-                     radioButtons(NS(id,"obtain_response"), "Create response set by",c("Upload TXT file" = "txt_upload", "Enter gene" = "gene_enter" )),
+                     radioButtons(NS(id,"obtain_response"), "Create response set by",c("Upload file" = "txt_upload", "Enter gene" = "gene_enter" )),
                      conditionalPanel(condition = "input.obtain_response == 'gene_enter' ", ns = ns,
                                       selectizeInput(NS(id,"gene_list_response"),"Select gene(s)", choices = NULL, multiple = TRUE)
                      ),
@@ -95,7 +95,7 @@ dataprepInputControl_UI <- function(id) {
                                     choices = c(""))
     ),
     conditionalPanel(condition = "input.predictor_prep_method == 'gene_list' ", ns = ns,
-                     radioButtons(NS(id,"obtain_predictor"), "Create predictor set by",c("Upload TXT file" = "txt_upload", "Enter gene" = "gene_enter",
+                     radioButtons(NS(id,"obtain_predictor"), "Create predictor set by",c("Upload file" = "txt_upload", "Enter gene" = "gene_enter",
                                                                                          "Use all mRNAs available on the selected data(!)" = "allmRNA_aspredictor",
                                                                                          "Use all miRNAs available on the selected data" = "allmiRNA_aspredictor")),
                      conditionalPanel(condition = "input.obtain_predictor == 'gene_enter' ", ns = ns,
@@ -491,10 +491,10 @@ ui <- fluidPage(
 )
 server<- function(input,output,session) {
   dataprepml_Serverz("ml")
-  
+
   df <- dataprepml_Serverz("ml")
   regression_ml_Server("ml",regress_data  = df)
-  
+
 }
 
 shinyApp(ui, server)

@@ -159,9 +159,13 @@ tcgaexplorer_ml_UI <- function(id) {
           
           column(6,dataTableOutput(NS(id,"predictor_set")))
         ),
+        h6("Listed genes are not present in the data and they are removed from the response list."),
+        verbatimTextOutput(NS(id,"validation_message_response")),
+        h6("Listed genes are not present in the data and they are removed from the predictor list."),
+        verbatimTextOutput(NS(id,"validation_message_predictor"))
+        #verbatimTextOutput(NS(id,"test")),
+        #dataTableOutput(NS(id,"test_df"))
         
-        verbatimTextOutput(NS(id,"validation_message")),
-        verbatimTextOutput(NS(id,"test"))
         
       )
     ),
@@ -195,7 +199,7 @@ tcgaexplorer_ml_UI <- function(id) {
 dataprepml_Serverz <- function(id) {
   moduleServer(id,function(input,output,session){
     
-    metadata <- reactive({readRDS("~/Desktop/MLRegression/mlregression/skcm_merged_l_clean.rds")})
+    metadata <- reactive({readRDS("~/Desktop/MLRegression/mlregression/BRCA.rds")})
     
     
     #Response, obtain from msigdb
@@ -262,9 +266,7 @@ dataprepml_Serverz <- function(id) {
       updateSelectizeInput(session,'gene_list_response', choices = genelist, server = TRUE)
       updateSelectizeInput(session, 'gene_list_predictor', choices = genelist, server = TRUE)
       
-      output$test <- renderText({
-        print(input$max_zero_percent)
-      })
+      
       
     })
     
@@ -287,11 +289,12 @@ dataprepml_Serverz <- function(id) {
           req(file)
           validate(need(ext == "txt", "Please upload a txt file"))
           list_r = read.table(file$datapath, header = TRUE, sep = "", dec = ".")
-          colnames(list_p) = "gene_symbol"
+          
         }
         
       }
-      list_r
+      colnames(list_r) = "gene_symbol"
+      unique(list_r)
     })
     
     predictor_det <- reactive({
@@ -310,44 +313,73 @@ dataprepml_Serverz <- function(id) {
           req(file)
           validate(need(ext == "txt", "Please upload a txt file"))
           list_p <- read.table(file$datapath, header = FALSE, sep = "", dec = ".")
-          colnames(list_p) <- "gene_symbol"
+          
         }
       }
-      list_p
-    })
-    
-    #
-    output$response_set <- renderDataTable({response_det() }) #response determinants 
-    output$predictor_set <- renderDataTable({predictor_det() }) #predictor determinants 
-    
-    output$validation_message <- renderText({
-      genelist <- predictor_det()$gene_symbol
-      is.exist <- genelist %in% colnames(metadata())
-      x <- predictor_det()[which(is.exist == "FALSE"),]
-      x
-    })
-    
-    
-    
-    reg_data <- reactive({
-      if (input$obtain_predictor == "allmiRNA_aspredictor") {
-        select(metadata(),response_det()[,1], starts_with("hsa")) %>% 
-          mutate(response = select(., response_det()[,1]) %>% rowMeans()) %>% 
-          select(response,starts_with("hsa")) %>% 
-          na.omit()
-        
-      } else {
-        select(metadata(), response_det()[,1], predictor_det()[,1]) %>%
-          mutate(response = select(., response_det()[,1]) %>% rowMeans()) %>%
-          select(response, predictor_det()[,1]) %>% # ,response_det()[,1] --> predictor data
-          na.omit()
-      }
+      colnames(list_p) <- "gene_symbol"
+      unique(list_p)
       
     })
     
-    # output$test = renderText({
-    #   print(colMeans(reg_data()[1:3]))
-    # })
+     
+    #################################################################################################
+    
+    predictor_missing <- reactive({
+      genelist <- predictor_det()$gene_symbol
+      is.exist <- genelist %in% colnames(metadata())
+      predictor_missing <- predictor_det()[which(is.exist == "FALSE"),]
+      predictor_missing
+    })
+    
+    response_missing <- reactive({
+      genelist <- response_det()$gene_symbol
+      is.exist <- genelist %in% colnames(metadata())
+      response_missing <- response_det()[which(is.exist == "FALSE"),]
+      response_missing
+    })
+    output$validation_message_predictor <- renderText({
+      predictor_missing()
+    })
+    
+    output$validation_message_response <- renderText({
+      response_missing()
+    })
+    
+
+    
+    clean_response_set = reactive({
+      missing_genes = as.vector(response_missing())
+      response_det = response_det()
+      for (i in missing_genes) {
+        response_det = filter(response_det, gene_symbol != i)
+      }
+      response_det
+    })
+    
+    
+    clean_predictor_set = reactive({
+      missing_genes = as.vector(predictor_missing())
+      predictor_det = predictor_det()
+      for (i in missing_genes) {
+        predictor_det = filter(predictor_det, gene_symbol != i)
+      }
+      predictor_det
+    })
+    
+    
+    
+    output$response_set <- renderDataTable({clean_response_set() }) #response genes 
+    output$predictor_set <- renderDataTable({clean_predictor_set() }) #predictor genes
+    
+    reg_data <- reactive({
+      select(metadata(), clean_response_set()[,1], clean_predictor_set()[,1]) %>%
+        mutate(response = select(., clean_response_set()[,1]) %>% rowMeans()) %>%
+        select(response, clean_predictor_set()[,1]) %>% # ,response_det()[,1] --> predictor data
+        na.omit()
+      
+    })
+    
+    
     
     
     return(reg_data)
